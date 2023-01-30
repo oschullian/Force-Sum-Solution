@@ -1,9 +1,18 @@
 clear all
 close all
+%%%%%
+% This code calculates the force sum solution for a water-vapour interface and for membranes
+%%%%%
+
+% number of bins in the z-direction
 nzall=[101,201,301,401]
+
+% maximum number of frames to read
 readmax=10000000;
 
+% loop over simulation runs
 for runindex=1
+% loop over differen number of bins
 for inz=1:4
 fileending=sprintf('_ee_%i.txt',runindex);
 pathgro=sprintf('init%i.gro',runindex);
@@ -12,12 +21,14 @@ pathforce=sprintf('force_ee_%i.xvg',runindex);
 pathvel=sprintf('vel_ee_%i.xvg',runindex);
 pathpos=sprintf('pos_ee_%i.xvg',runindex);
 
+% load gro-file
 fr=fopen(pathgro,'r');
 dat=fgetl(fr);
+% retrieve the number of particles (second line)
 n=str2num(fgetl(fr));
 
+% read the particles and determine the mass
 mass=zeros(n,1);
-
 for i=1:n
     i/n
 dat=fgetl(fr);
@@ -50,7 +61,7 @@ vfa=1e-9/1e-12;
 ffa=1.66053892103219e-12;
 mfa=1.66e-27;
 
-% define the z-vector
+% read boxsize
 fbox=fopen(pathbox,'r');
 for i=1:24
    fgetl(fbox) ;
@@ -58,22 +69,22 @@ end
 ba=transpose(fscanf(fbox,'%f',[7,Inf]));
 fclose(fbox);
 
-
+% define the z-vector
 nz=nzall(inz);
 z=linspace(-0.5*max(ba(:,4)),0.5*max(ba(:,4)),nz);
 dz=z(2)-z(1);
-
+% save z-vector
 fz=fopen(horzcat(sprintf('zvec_nz=%i',nz),fileending),'w');
-
 fprintf(fz,'%e ',z);
 fclose(fz);
 
+
 m_unique=unique(mass);
-
 % open files and define the number of frames 
-nt=1;
 
-% replicate the mass 
+
+nt=1;
+% replicate the mass in case multiple trajectories are read in simulataneously
 m_part=repmat(mass,1,nt);
 m_index=m_part;
 for i=1:length(m_unique)
@@ -82,7 +93,7 @@ end
 % define output arrays
 dens=zeros(length(m_unique),nz);
 
-%
+% open files that contain box, force, velocity, xa
 bap=fopen(pathbox,'r');
 for i=1:24
    fgetl(bap);
@@ -100,7 +111,7 @@ for i=1:n*3+18
    fgetl(xa);
 end
 
-
+% open files to write out results
 fkxx=fopen(horzcat(sprintf('ksigmaxx_nz=%i',nz),fileending),'w');
 fkxy=fopen(horzcat(sprintf('ksigmaxy_nz=%i',nz),fileending),'w');
 fkxz=fopen(horzcat(sprintf('ksigmaxz_nz=%i',nz),fileending),'w');
@@ -122,7 +133,7 @@ end
 
 
 
-
+% initialise arrays for results
 framecounter=0;
 run2=0;
 for readin=1:readmax
@@ -150,7 +161,6 @@ framecounter=framecounter+size(z_part,2);
 v_x=vp(2:3:end,:)*vfa;
 v_y=vp(3:3:end,:)*vfa;
 v_z=vp(4:3:end,:)*vfa;
-
 f_x=fp(2:3:end,:)*ffa;
 f_y=fp(3:3:end,:)*ffa;
 f_z=fp(4:3:end,:)*ffa;
@@ -170,6 +180,7 @@ vol=area*dz*xfa;
 % loop over displacements
 for k=-2:2
 
+% center the system and calculate the force sum solution
 z_ind_center=round((z_part+b_center+k*b_disp-z(1))/dz)+1;
 z_ind_integral=ceil((z_part+b_center+k*b_disp-z(1))/dz)+1;
 
